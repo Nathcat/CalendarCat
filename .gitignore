@@ -26,3 +26,5 @@ build
 .gradle
 .vscode
 .kotlin
+
+test.ics

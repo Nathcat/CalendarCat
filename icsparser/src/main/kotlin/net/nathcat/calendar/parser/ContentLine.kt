@@ -2,15 +2,16 @@ package net.nathcat.calendar.parser
 
 import java.lang.StringBuilder
 import java.util.Scanner
+import java.io.FileInputStream
+import java.io.Serializable
 
-public class ContentLine {
+public class ContentLine : Serializable {
     companion object {
         private val NAME_SECTION = 0
         private val PARAM_NAME_SECTION = 1
         private val PARAM_VALUE_SECTION = 2
         private val CONTENT_SECTION = 3
-        private val CRLF_SECTION = 4
-        private val CRLF_END_SECTION = 5
+        private val DELIMITER_SECTION = 4
 
         /** 
          * Parse a content line from its' string.
@@ -24,6 +25,7 @@ public class ContentLine {
             var param_values = arrayListOf<String>()
             var content: String = ""
             var section = NAME_SECTION
+            var delim_return = NAME_SECTION
             
             for (char in line) {
                 when (section) {
@@ -66,6 +68,10 @@ public class ContentLine {
                             sb = StringBuilder()
                             section = CONTENT_SECTION
                         }
+                        else if (char == "\""[0]) {
+                            section = DELIMITER_SECTION
+                            delim_return = PARAM_VALUE_SECTION
+                        }
                         else {
                             sb.append(char)
                         }
@@ -73,6 +79,15 @@ public class ContentLine {
 
                     CONTENT_SECTION -> {
                         sb.append(char)
+                    }
+
+                    DELIMITER_SECTION -> {
+                        if (char == "\""[0] /* Sorry, just for syntax highlighting because vscode is being dumb */) {
+                            section = delim_return
+                        }
+                        else {
+                            sb.append(char)
+                        }
                     }
 
                     else -> { throw IllegalStateException("Invalid parser section: $section")}
@@ -136,6 +151,25 @@ public class ContentLine {
             }
 
             result.add(currentLine)
+
+            return result.toTypedArray()
+        }
+
+        /**
+         * Read all the content lines from a provided ICS file
+         * @param filename The path to the ICS file
+         * @returns An array containing all content lines in the ICS file
+         */
+        fun fromFile(filename: String): Array<ContentLine> {
+            val inStream = FileInputStream(filename)
+            val content = String(inStream.readAllBytes(), Charsets.UTF_8)
+            val lines = unfoldAll(content)
+            
+            var result = arrayListOf<ContentLine>()
+        
+            for (line in lines) {
+                result.add(parse(line))
+            }
 
             return result.toTypedArray()
         }

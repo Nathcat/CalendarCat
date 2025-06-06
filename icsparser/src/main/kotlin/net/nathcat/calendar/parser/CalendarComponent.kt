@@ -1,5 +1,6 @@
 package net.nathcat.calendar.parser
 
-public class ICSCalendar {
+
+public class CalendarComponent {
     
 }

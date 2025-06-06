@@ -1,8 +1,21 @@
 package net.nathcat.calendar
 
-import net.nathcat.calendar.parser.ContentLine
+import net.nathcat.calendar.parser.ICSObject
 
 fun main() {
-    val c = ContentLine.unfoldAll("DESCRIPTION;PARAM1=hello;PARAM2=world:this is a lo\r\n\tng description\r\n\t\t that exists on a long line.\r\n")
-    println(ContentLine.parse(c[0]).toString())
+    val obj = ICSObject.fromFile("../test.ics")
+
+    f(obj, 0)
+}
+
+fun f(o: ICSObject, c: Int) {
+    for (i in 0..c-1) {
+        print("\t")
+    }
+    
+    println(o.toString())
+
+    for (i in 0..o.children.size-1) {
+        f(o.children[i], c + 1)
+    }
 }
