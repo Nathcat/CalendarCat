@@ -58,7 +58,10 @@ internal class FrontEndServer(
     
         server.setExecutor(Executors.newCachedThreadPool())
 
-        server.createContext("/static", StaticHandler(serverConfig.get("webroot") as String))
+        val webroot = serverConfig.get("webroot") as String
+
+        server.createContext("/static", StaticHandler(webroot))
+        server.createContext("/", PageHandler(webroot))
 
         println("Front end is ready to accept HTTP${if (usingSSL) "S" else ""} connections on port ${serverConfig.get("port")}.")
         server.start()

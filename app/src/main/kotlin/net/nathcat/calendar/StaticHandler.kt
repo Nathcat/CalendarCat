@@ -7,7 +7,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.Date
 
-public class StaticHandler(
+internal class StaticHandler(
     private val webroot: String
 ) : HttpHandler {
     public override fun handle(t: HttpExchange) {
