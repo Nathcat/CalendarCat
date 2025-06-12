@@ -11,4 +11,5 @@ plugins {
 }
 
 rootProject.name = "CalendarCat"
-include("app", "icsparser")
+
+include("app", "icsparser", "AuthCat")

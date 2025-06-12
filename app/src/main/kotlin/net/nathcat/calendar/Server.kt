@@ -5,6 +5,7 @@ import com.sun.net.httpserver.*
 import java.net.InetSocketAddress
 import javax.net.ssl.SSLContext
 import java.util.concurrent.Executors
+import java.io.FileInputStream
 
 /**
  * Front end server for CalendarCat
@@ -14,9 +15,11 @@ import java.util.concurrent.Executors
 internal class FrontEndServer(
     private val usingSSL: Boolean,
     private val serverConfig: JSONObject,
-    private val sslConfig: JSONObject
+    private val sslConfig: JSONObject?
 ) {
     companion object {
+        internal var instance: FrontEndServer? = null
+
         private class SSLConfigurator(sslContext: SSLContext) : HttpsConfigurator(sslContext) {
             public override fun configure(params: HttpsParameters) {
                 try {
@@ -35,15 +38,17 @@ internal class FrontEndServer(
     }
 
     public fun start() {
-        if (serverConfig.get("port") == null) {
-            error("Missing port field in config file!")
+        instance = this
+
+        if (serverConfig.get("port") == null || serverConfig.get("webroot") == null) {
+            error("Missing either port or webroot field in config file!")
         }
 
         var server: HttpServer
 
         if (usingSSL) {
             server = HttpsServer.create(InetSocketAddress(Math.toIntExact(serverConfig.get("port") as Long)), 0)
-            var provider = LetsEncryptProvider(sslConfig)
+            var provider = LetsEncryptProvider(sslConfig!!)
             var sslContext = provider.getContext()
             server.setHttpsConfigurator(SSLConfigurator(sslContext!!))
         }
@@ -53,7 +58,27 @@ internal class FrontEndServer(
     
         server.setExecutor(Executors.newCachedThreadPool())
 
-        println("Front end is ready to accept HTTP${usingSSL ? "S" : ""} connections on port ${serverConfig.get("port")}.")
+        server.createContext("/static", StaticHandler(serverConfig.get("webroot") as String))
+
+        println("Front end is ready to accept HTTP${if (usingSSL) "S" else ""} connections on port ${serverConfig.get("port")}.")
         server.start()
+    }
+
+    internal fun getSpecialCodeContent(code: Int): String {
+        if (serverConfig.containsKey(code.toString())) {
+            return String(FileInputStream(serverConfig.get(code.toString()) as String).readAllBytes())
+        }
+
+        return "<h1>${code}</h1><p>Your request hit an unexpected error, <a href=\"https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/${code}\">more information</a></p>"
+    }
+}
+
+internal fun extensionToMIME(extension: String?): String {
+    when(extension) {
+        "html" -> return "text/html"
+        "js" -> return "text/javascript"
+        "css" -> return "text/css"
+        
+        else -> return "text/html"
     }
 }

@@ -10,6 +10,7 @@ dependencies {
     implementation("org.apache.commons:commons-text")
     implementation(project(":icsparser"))
     implementation(files("libs/json-simple-1.1.1.jar"))
+    implementation(project(":AuthCat"))
 }
 
 application {

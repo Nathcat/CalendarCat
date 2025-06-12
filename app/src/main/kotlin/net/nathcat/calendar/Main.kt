@@ -36,7 +36,8 @@ fun main(args: Array<String>) {
 
 
     var serverConfig = readJSON(serverConfigPath)
-    var sslConfig = readJSON(sslConfigPath)
+    var sslConfig: JSONObject? = null
+    if (usingSSL) sslConfig = readJSON(sslConfigPath)
 
     val server = FrontEndServer(usingSSL, serverConfig, sslConfig)
     server.start()
