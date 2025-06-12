@@ -7,6 +7,9 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.Date
 
+/**
+ * Handles a request for a static resource
+ */
 internal class StaticHandler(
     private val webroot: String
 ) : HttpHandler {
