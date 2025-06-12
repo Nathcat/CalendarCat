@@ -7,6 +7,10 @@ import java.io.ByteArrayInputStream
 
 /**
  * Represents components of an ICS calendar
+ * 
+ * @param name The name of the ICS object
+ * @param properties The properties named in the content line declaration
+ * @param children Child ICS objects
  */
 public class ICSObject(
     val name: String,
