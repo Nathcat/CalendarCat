@@ -6,6 +6,7 @@ import java.net.InetSocketAddress
 import javax.net.ssl.SSLContext
 import java.util.concurrent.Executors
 import java.io.FileInputStream
+import java.io.File
 
 /**
  * Front end server for CalendarCat
@@ -37,12 +38,31 @@ internal class FrontEndServer(
         }
     }
 
+    private val templates: MutableMap<String, String> = mutableMapOf<String, String>()
+
     public fun start() {
         instance = this
 
-        if (serverConfig.get("port") == null || serverConfig.get("webroot") == null) {
-            error("Missing either port or webroot field in config file!")
+        if (serverConfig.get("port") == null || serverConfig.get("webroot") == null || serverConfig.get("templatesDir") == null) {
+            error("Missing either port, webroot, or templatesDir field in config file!")
         }
+
+        // Read the templates from the given templates directory
+        var templatesDir = File(serverConfig.get("templatesDir") as String)
+        if (!templatesDir.isDirectory || !templatesDir.exists()) error("templatesDir must be a directory!")
+        
+        println("Searching $templatesDir for templates...")
+        val pattern = Regex("(?<name>.+)\\.html")
+        for (file in templatesDir.listFiles()) {
+            var m = pattern.matchEntire(file.name)
+            if (m == null) continue
+            else {
+                println("Found template ${m.groups["name"]!!.value}")
+                var content = String(FileInputStream(file).readAllBytes())
+                templates.put(m.groups["name"]!!.value, content)
+            }     
+        }
+
 
         var server: HttpServer
 
@@ -74,14 +94,30 @@ internal class FrontEndServer(
 
         return "<h1>${code}</h1><p>Your request hit an unexpected error, <a href=\"https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/${code}\">more information</a></p>"
     }
+
+    /**
+     * Replace templates within the given html string with the provided templates
+     * @param html The HTML string to search for templates
+     * @returns The HTML string with all present templates replaced
+     */
+    internal fun replaceTemplates(html: String): String {
+        var result = String(html.toCharArray())
+
+        for (name in templates.keys) {
+            var r = Regex("<$name\\s*\\/>")
+            result = r.replace(result, templates[name]!!)
+        }
+
+        return result
+    }
 }
 
 internal fun extensionToMIME(extension: String?): String {
     when(extension) {
-        "html" -> return "text/html"
+        "html" -> return "text/html; charset=UTF-8"
         "js" -> return "text/javascript"
         "css" -> return "text/css"
         
-        else -> return "text/html"
+        else -> return "text/html; charset=UTF-8"
     }
 }

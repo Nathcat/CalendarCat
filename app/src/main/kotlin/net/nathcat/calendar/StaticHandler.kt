@@ -15,7 +15,7 @@ internal class StaticHandler(
 ) : HttpHandler {
     public override fun handle(t: HttpExchange) {
         var path = Path.of(webroot, t.getRequestURI().path)
-        var content: ByteArray? = null
+        var content: ByteArray = byteArrayOf()
         var code = 404
         var mime = "text/html"
         try {
@@ -44,7 +44,7 @@ internal class StaticHandler(
         println("${Date().toString()}: ${code} - ${t.getRequestURI().path} -> ${t.remoteAddress.hostString}")
 
         t.getResponseHeaders().set("Content-Type", mime)
-        t.sendResponseHeaders(code, content!!.size.toLong())
+        t.sendResponseHeaders(code, content.size.toLong())
         var os = t.getResponseBody()
         os.write(content)
         os.close()
