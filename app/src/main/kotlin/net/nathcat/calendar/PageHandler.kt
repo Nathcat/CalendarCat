@@ -47,6 +47,11 @@ internal class PageHandler(
         }
 
         content = FrontEndServer.instance!!.replaceTemplates(String(content, Charsets.UTF_8)).toByteArray(Charsets.UTF_8)
+        
+        content = FrontEndServer.instance!!.replaceData(String(content, Charsets.UTF_8), mapOf<String, Any>(
+            "isCool" to true,
+            "username" to "Nathcat"
+        )).toByteArray(Charsets.UTF_8)
 
         println("${Date().toString()}: ${code} - ${t.getRequestURI().path} -> ${t.remoteAddress.hostString}")
 

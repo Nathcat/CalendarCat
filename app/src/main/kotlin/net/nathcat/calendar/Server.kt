@@ -110,6 +110,25 @@ internal class FrontEndServer(
 
         return result
     }
+
+    internal fun replaceData(html: String, dataMap: Map<String, Any>): String {
+        var result = String(html.toCharArray())
+
+        for (name in dataMap.keys) {
+            var r = Regex("<<\\s*$name\\s*>>")
+            result = r.replace(result, dataMap[name].toString())
+        }
+        
+        var r = Regex("<<\\s*if\\s*\\((?<name>.+)\\)\\s*>>(?<sub>.*)<<\\s*end if\\s*>>")
+        var M = r.findAll(result)
+
+        for (m in M) {
+            if (dataMap[m.groups["name"]!!.value] as Boolean) result = result.subSequence(0, m.range.first).toString() + m.groups["sub"]!!.value + result.subSequence(m.range.last + 1, result.length).toString()
+            else result = result.subSequence(0, m.range.first).toString() + result.subSequence(m.range.last + 1, result.length).toString()
+        }
+
+        return result
+    }
 }
 
 internal fun extensionToMIME(extension: String?): String {
