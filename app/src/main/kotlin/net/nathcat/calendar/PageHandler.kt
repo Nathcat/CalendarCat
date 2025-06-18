@@ -10,52 +10,32 @@ import java.util.Date
 /**
  * Handles a request to a page which does not require authentication
  */
-internal class PageHandler(
-    private val webroot: String
+open internal class PageHandler(
+    private val webroot: String,
+    internal var dataMap: MutableMap<String, Any>
 ) : HttpHandler {
     public override fun handle(t: HttpExchange) {
-        var path = Path.of(webroot, t.getRequestURI().path)
-        var content: ByteArray = byteArrayOf()
         var code = 404
-        var mime = "text/html"
+        var path = t.requestURI.path
 
-        if (path.toFile().isDirectory && path.toFile().exists()) {
-            path = Path.of(path.toString(), "index.html")
-        }
+        var resource = Resource.fromUri(webroot, t.requestURI.path)
 
-        try {
-            var fis = FileInputStream(path.toString())
-            content = fis.readAllBytes()
-            code = 200
-        }
-        catch (e: FileNotFoundException) {
+        if (resource == null) {
             println("${Date().toString()}: Couldn't find requested file, ${path.toString()}")
+            code = 404
         }
-
-        var m = Regex("^.*\\.(?<ext>.*)$").matchEntire(path.toFile().name)
-        if (m != null) {
-            code = 200
-            mime = extensionToMIME(if (m.groups["ext"] == null) null else m.groups["ext"]!!.value)
-        }
-        else {
-            code = 500
-            println("${Date().toString()}: Invalid target file name")
-        }
+        else code = 200
 
         if (code != 200) {
-            content = FrontEndServer.instance!!.getSpecialCodeContent(code).toByteArray()
+            resource = FrontEndServer.instance!!.getSpecialCodeContent(code)
         }
 
-        content = FrontEndServer.instance!!.replaceTemplates(String(content, Charsets.UTF_8)).toByteArray(Charsets.UTF_8)
-        
-        content = FrontEndServer.instance!!.replaceData(String(content, Charsets.UTF_8), mapOf<String, Any>(
-            "isCool" to true,
-            "username" to "Nathcat"
-        )).toByteArray(Charsets.UTF_8)
+        var content = FrontEndServer.instance!!.replaceTemplates(String(resource!!.content, Charsets.UTF_8)).toByteArray(Charsets.UTF_8)
+        content = FrontEndServer.instance!!.replaceData(String(content, Charsets.UTF_8), dataMap).toByteArray(Charsets.UTF_8)
 
         println("${Date().toString()}: ${code} - ${t.getRequestURI().path} -> ${t.remoteAddress.hostString}")
 
-        t.getResponseHeaders().set("Content-Type", mime)
+        t.getResponseHeaders().set("Content-Type", resource.mime)
         t.sendResponseHeaders(code, content.size.toLong())
         var os = t.getResponseBody()
         os.write(content)

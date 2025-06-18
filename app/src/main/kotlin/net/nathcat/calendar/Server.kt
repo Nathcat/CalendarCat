@@ -15,8 +15,9 @@ import java.io.File
  */
 internal class FrontEndServer(
     private val usingSSL: Boolean,
-    private val serverConfig: JSONObject,
-    private val sslConfig: JSONObject?
+    internal val serverConfig: JSONObject,
+    private val sslConfig: JSONObject?,
+    internal val debug: Boolean
 ) {
     companion object {
         internal var instance: FrontEndServer? = null
@@ -81,18 +82,23 @@ internal class FrontEndServer(
         val webroot = serverConfig.get("webroot") as String
 
         server.createContext("/static", StaticHandler(webroot))
-        server.createContext("/", PageHandler(webroot))
+        server.createContext("/", PageHandler(webroot, mutableMapOf<String, Any>()))
+        server.createContext("/app", AuthenticatedPageHandler(webroot))
 
         println("Front end is ready to accept HTTP${if (usingSSL) "S" else ""} connections on port ${serverConfig.get("port")}.")
         server.start()
     }
 
-    internal fun getSpecialCodeContent(code: Int): String {
+    internal fun getSpecialCodeContent(code: Int): Resource {
         if (serverConfig.containsKey(code.toString())) {
-            return String(FileInputStream(serverConfig.get(code.toString()) as String).readAllBytes())
+            return Resource.fromPath(serverConfig.get(code) as String)!!
         }
 
-        return "<h1>${code}</h1><p>Your request hit an unexpected error, <a href=\"https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/${code}\">more information</a></p>"
+        return Resource(
+            "/error",
+            "<h1>${code}</h1><p>Your request hit an unexpected error, <a href=\"https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/${code}\">more information</a></p>".toByteArray(),
+            "text/html"
+        )
     }
 
     /**
@@ -111,6 +117,12 @@ internal class FrontEndServer(
         return result
     }
 
+    /**
+     * Replaces data templates with the corresponding supplied values in the data map.
+     * @param html The string containing the templates
+     * @param dataMap The map containing the key - value data
+     * @returns A HTML with all data templates replaced. 
+     */
     internal fun replaceData(html: String, dataMap: Map<String, Any>): String {
         var result = String(html.toCharArray())
 

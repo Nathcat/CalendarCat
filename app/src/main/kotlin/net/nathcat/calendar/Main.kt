@@ -14,6 +14,11 @@ fun main(args: Array<String>) {
         usingSSL = false
     }
 
+    var debug = false
+    if (Arrays.stream(args).anyMatch("--debug"::equals)) {
+        debug = true
+    }
+
     var serverConfigPath = "Assets/Server_Config.json"
     var sslConfigPath = "Assets/SSL_Config.json"
 
@@ -39,7 +44,7 @@ fun main(args: Array<String>) {
     var sslConfig: JSONObject? = null
     if (usingSSL) sslConfig = readJSON(sslConfigPath)
 
-    val server = FrontEndServer(usingSSL, serverConfig, sslConfig)
+    val server = FrontEndServer(usingSSL, serverConfig, sslConfig, debug)
     server.start()
 }
 

@@ -14,36 +14,29 @@ internal class StaticHandler(
     private val webroot: String
 ) : HttpHandler {
     public override fun handle(t: HttpExchange) {
-        var path = Path.of(webroot, t.getRequestURI().path)
-        var content: ByteArray = byteArrayOf()
         var code = 404
-        var mime = "text/html"
-        try {
-            var fis = FileInputStream(path.toString())
-            content = fis.readAllBytes()
-            code = 200
-        }
-        catch (e: FileNotFoundException) {
-            println("${Date().toString()}: Couldn't find requested file, ${path.toString()}")
-        }
+        var path = t.requestURI.path
 
-        var m = Regex("^.*\\.(?<ext>.*)$").matchEntire(path.toFile().name)
-        if (m != null) {
-            code = 200
-            mime = extensionToMIME(if (m.groups["ext"] == null) null else m.groups["ext"]!!.value)
-        }
-        else {
-            code = 500
-            println("${Date().toString()}: Invalid target file name")
+        var resource = Resource.fromUri(webroot, t.requestURI.path)
+
+        if (resource == null) {
+            println("${Date().toString()}: Couldn't find requested file, ${path.toString()}")
+            code = 404
         }
 
         if (code != 200) {
-            content = FrontEndServer.instance!!.getSpecialCodeContent(code).toByteArray()
+            resource = FrontEndServer.instance!!.getSpecialCodeContent(code)
         }
+
+        var content = FrontEndServer.instance!!.replaceTemplates(String(resource!!.content, Charsets.UTF_8)).toByteArray(Charsets.UTF_8)
+        content = FrontEndServer.instance!!.replaceData(String(resource.content, Charsets.UTF_8), mapOf<String, Any>(
+            "isCool" to true,
+            "username" to "Nathcat"
+        )).toByteArray(Charsets.UTF_8)
 
         println("${Date().toString()}: ${code} - ${t.getRequestURI().path} -> ${t.remoteAddress.hostString}")
 
-        t.getResponseHeaders().set("Content-Type", mime)
+        t.getResponseHeaders().set("Content-Type", resource.mime)
         t.sendResponseHeaders(code, content.size.toLong())
         var os = t.getResponseBody()
         os.write(content)
